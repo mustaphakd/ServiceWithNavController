@@ -69,6 +69,9 @@ class ForegroundService : Service() {
             writeToFile()
         }
 
+        val wrapper = NativeWrapper()
+        wrapper.startApp()
+
         writingThread.start()
     }
 
@@ -93,13 +96,17 @@ class ForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         exitThreads = true
+
+
+        val wrapper = NativeWrapper()
+        wrapper.stopApp()
     }
 
     override fun stopService(name: Intent?): Boolean {
-        return super.stopService(name)
         log.info("stop service requested")
 
         exitThreads = true
+        return super.stopService(name)
     }
 
 
@@ -152,4 +159,6 @@ class ForegroundService : Service() {
         Toast.makeText(this, content, Toast.LENGTH_LONG).show()
 
     }
+
+
 }
