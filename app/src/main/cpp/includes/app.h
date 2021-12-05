@@ -7,11 +7,31 @@
 
 
 #include <time.h>
+//#include <stdlib.h>
+/**
+ * includes following below:
+ * #include <sys/cdefs.h>
+
+/* wchar_t is required in stdlib.h according to POSIX.
+ * note that defining __need_wchar_t prevents stddef.h
+ * to define all other symbols it does normally *
+#define __need_wchar_t
+#include <stddef.h>
+
+#include <stddef.h>
+#include <string.h>
+#include <alloca.h>
+#include <strings.h>
+#include <memory.h>
+ */
+
+
 //#include <inttypes.h>
-//#include <pthread.h>
 #include <jni.h>
 #include <android/log.h>
 #include <string>
+//#include "webServer.h"
+#include <memory>
 //#include <assert.h>
 
 #define  LOG_TAG    "wrsft-ServiceWIthNavController" // or static const char* kTAG = "hello-jniCallback";
@@ -22,11 +42,12 @@
 #define DEBUG 1
 
 extern "C" {
-    void start_app(__unused JNIEnv *pEnv, __unused jobject pObj, __unused jstring directoryName);
-    void stop_app(__unused JNIEnv *pEnv, jobject pObj);
+    void start_app( JNIEnv *pEnv, jobject pObj, jstring directoryName);// __unused jstring directoryName
+    void stop_app(JNIEnv *pEnv, jobject pObj);
 }
 
 namespace wrsft {
+
     class Application {
         public:
         static Application& get_instance(const std::string path);
@@ -37,11 +58,17 @@ namespace wrsft {
         void stop(); // stop thread
 
         // see what happens to instance before implementing cleanup method
+        ~Application(); /*{
+            wrsft::Application::write_log("Application::Destructor ~Application", "start- stop");
+        }*/
 
         private:
         const std::string directory_path;
         static Application * instance ;
 
+        //WebServer<5> webServer;
+
+        Application() = delete;
         Application(const std::string);
         Application(const Application& other) = delete;
         Application& operator=(const Application& other) = delete;

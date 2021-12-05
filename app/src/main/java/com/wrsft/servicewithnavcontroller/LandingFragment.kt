@@ -16,6 +16,7 @@ import com.wrsft.servicewithnavcontroller.databinding.FragmentLandingBinding
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.*
+import kotlin.system.exitProcess
 
 // TODO: Rename parameter arguments, choose names that match
 // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -60,6 +61,13 @@ class LandingFragment : Fragment() {
         binding.log.setOnClickListener { view ->
             val action = LandingFragmentDirections.actionLandingFragmentToLogsFragment()
             view.findNavController().navigate(action)
+        }
+
+        binding.close.setOnClickListener {view ->
+            activity?.finish()
+            activity?.finishAffinity()
+
+            //exitProcess(-1) //0
         }
 
 

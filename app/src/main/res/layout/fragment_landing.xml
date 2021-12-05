@@ -18,7 +18,7 @@
         android:enabled="@{viewmodel.canStart}"
         android:onClick="@{(view) -> viewmodel.startService()}"
         android:text="@string/start_service"
-        android:translationY="50dp" />
+        android:translationY="25dp" />
 
     <Button
         android:id="@+id/stop"
@@ -27,13 +27,20 @@
         android:enabled="@{viewmodel.canStop}"
         android:onClick="@{(view) -> viewmodel.stopService()}"
         android:text="@string/stop_service"
-        android:translationY="200dp" />
+        android:translationY="150dp" />
 
     <Button
         android:id="@+id/log"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:text="@string/view_logs"
-        android:translationY="350dp" />
+        android:translationY="275dp" />
+
+    <Button
+        android:id="@+id/close"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:text="Close"
+        android:translationY="400dp" />
 </FrameLayout>
 </layout>

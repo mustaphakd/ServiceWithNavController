@@ -122,4 +122,8 @@ class ViewModel () : ViewModel() {
         //_canStop.value = false
     }
 
+    fun open() {
+
+    }
+
 }

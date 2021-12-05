@@ -37,8 +37,11 @@ class ForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         showToast("onStartCommand")
+
+
+
         val pendingIntent: PendingIntent =
-            Intent(this, ForegroundService::class.java).let { notificationIntent ->
+            Intent(this, MainActivity::class.java).let { notificationIntent -> //ForegroundService
                 PendingIntent.getActivity(this, 0, notificationIntent, if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){ PendingIntent.FLAG_MUTABLE}else{ 0} ) //PendingIntent.FLAG_MUTABLE
             }
 
@@ -70,7 +73,7 @@ class ForegroundService : Service() {
         }
 
         val wrapper = NativeWrapper()
-        wrapper.startApp()
+        wrapper.startWrapperApp()
 
         writingThread.start()
     }
@@ -99,7 +102,7 @@ class ForegroundService : Service() {
 
 
         val wrapper = NativeWrapper()
-        wrapper.stopApp()
+        wrapper.stopWrapperApp()
     }
 
     override fun stopService(name: Intent?): Boolean {
