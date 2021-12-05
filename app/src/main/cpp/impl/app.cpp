@@ -9,7 +9,7 @@ namespace wrsft {
 
     Application * Application::instance = nullptr;
     Application::Application(const std::string str):
-        directory_path{str}//, webServer{ WebServer<5>(&Application::write_log)}
+        directory_path{str}, webServer{ WebServer<5>(&Application::write_log)}
     {
 
         Application::write_log("Application::ctr", "directory path and webserver instantiated");
@@ -33,12 +33,12 @@ namespace wrsft {
      void Application::start(){
          Application::write_log("Application::start", "start");
 
-         //webServer.startServer();
+         webServer.startServer();
          Application::write_log("Application::start", "end");
     }
      void Application::stop(){
          Application::write_log("Application::stop", "start");
-        // this->webServer.endServer();
+         this->webServer.endServer();
          Application::write_log("Application::stop", "end");
     }
 
@@ -55,3 +55,16 @@ namespace wrsft {
     }
 
 }
+/*
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_wrsft_servicewithnavcontroller_NativeWrapper_startapp(JNIEnv *env, jobject thiz,
+                                                               jstring directory) {
+    // TODO: implement startapp()
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_wrsft_servicewithnavcontroller_NativeWrapper_stopapp(JNIEnv *env, jobject thiz) {
+    // TODO: implement stopapp()
+}
+*/

@@ -17,6 +17,8 @@ add_library( # Specifies the name of the library. libnative-lib.so
              # Sets the library as a shared library.  SHARED
              SHARED
 
+            "impl/entry.cpp"
+
              # Provides a relative path to your source file(s).
              ${SOURCE_FILES} )
 set_target_properties(native-lib PROPERTIES LINKER_LANGUAGE CXX)

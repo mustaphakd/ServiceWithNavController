@@ -30,7 +30,7 @@
 #include <jni.h>
 #include <android/log.h>
 #include <string>
-//#include "webServer.h"
+#include "webServer.h"
 #include <memory>
 //#include <assert.h>
 
@@ -66,7 +66,7 @@ namespace wrsft {
         const std::string directory_path;
         static Application * instance ;
 
-        //WebServer<5> webServer;
+        WebServer<5> webServer;
 
         Application() = delete;
         Application(const std::string);

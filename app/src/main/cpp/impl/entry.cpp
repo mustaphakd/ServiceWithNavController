@@ -1,7 +1,12 @@
 //
 // Created by musta on 11/29/2021.
 //
-//#include <__config>
+
+
+#ifndef SERVICEWITHNAVCONTROLLER_ENTRY_CPP
+#define SERVICEWITHNAVCONTROLLER_ENTRY_CPP
+
+#include <__config>
 
 #include "app.h"
 
@@ -50,8 +55,8 @@ JNIEXPORT void start_app( JNIEnv *pEnv,  jobject pObj,  jstring directoryName) /
     const char *str = pEnv->GetStringUTFChars(directoryName, 0);
     std::string folder {str};
 
-   // wrsft::Application& _app = wrsft::Application::get_instance(folder);
-   // _app.start();
+    wrsft::Application& _app = wrsft::Application::get_instance(folder);
+    _app.start();
 
     /* Now we are done with str */
     pEnv->ReleaseStringUTFChars(directoryName, str);
@@ -63,10 +68,12 @@ extern "C"
 JNIEXPORT void stop_app( JNIEnv *pEnv, jobject pObj)
 {
     wrsft::Application::write_log("JNIEXPORT__stop_app", "start");
-   // wrsft::Application& _app = wrsft::Application::get_instance("");
-    //_app.stop();
+    wrsft::Application& _app = wrsft::Application::get_instance("");
+    _app.stop();
     wrsft::Application::write_log("JNIEXPORT__stop_app", "end");
 }
+
+/*
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_wrsft_servicewithnavcontroller_NativeWrapper_startapp(JNIEnv *env, jobject thiz,
@@ -78,3 +85,19 @@ JNIEXPORT void JNICALL
 Java_com_wrsft_servicewithnavcontroller_NativeWrapper_stopapp(JNIEnv *env, jobject thiz) {
     // TODO: implement stopapp()
 }
+//https://developer.android.com/games/agdk/integrate-game-activity?hl=fr
+
+extern "C" {
+    void android_main(struct android_app* state);
+};
+
+void android_main(struct android_app* app) {
+    //NativeEngine *engine = new NativeEngine(app);
+    //engine->GameLoop();
+    //delete engine;
+
+    wrsft::Application::write_log("android_main", "start-stop" );
+}
+ */
+
+#endif SERVICEWITHNAVCONTROLLER_ENTRY_CPP

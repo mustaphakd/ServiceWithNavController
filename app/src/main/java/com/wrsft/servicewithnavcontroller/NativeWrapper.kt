@@ -1,6 +1,6 @@
 package com.wrsft.servicewithnavcontroller
 
-///@Suppress("KotlinJniMissingFunction")
+@Suppress("KotlinJniMissingFunction")
 class NativeWrapper {
 
     external fun startapp(directory: String) //: Void
