@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.logging.Logger
@@ -72,8 +73,9 @@ class ForegroundService : Service() {
             writeToFile()
         }
 
+        val temDir = getLogDirectory()
         val wrapper = NativeWrapper()
-        wrapper.startWrapperApp()
+        wrapper.startWrapperApp(temDir.absolutePath)
 
         writingThread.start()
     }
@@ -82,15 +84,13 @@ class ForegroundService : Service() {
         val buffer = StringBuilder()
         while (true)
         {
-            Thread.sleep(10000)
+            Thread.sleep(50000)
 
-            getCurrentDateTime(buffer)
-            buffer.append("-- WriteFile running .... \r\n")
-
-            //currentLog.appendText(buffer.toString())
+           /* getCurrentDateTime(buffer)
+            buffer.append("-- WriteFile running .... \r\n")  //currentLog.appendText(buffer.toString())
 
             log.info("service running.. ${buffer.toString()}")
-            buffer.clear()
+            buffer.clear() */
 
             if(exitThreads) break
         }
@@ -110,6 +110,19 @@ class ForegroundService : Service() {
 
         exitThreads = true
         return super.stopService(name)
+    }
+
+
+    private fun getLogDirectory(): File {
+        val ext: File? = getExternalFilesDir(null)
+        val tempDir = File(ext, "logs/")
+        tempDir.mkdirs()
+
+        if (!tempDir.exists() || !tempDir.canWrite()) {
+            throw Error("Failed to open logs directory");
+        }
+
+        return tempDir
     }
 
 

@@ -10,6 +10,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+
+
 #define MAX_CLIENT 5
 
 //class Streamer;
@@ -52,7 +54,6 @@ namespace wrsft {
         int exit;
         const LoggerType logfunc;
         pthread_t worker;
-
 
     };
 }
@@ -102,7 +103,7 @@ namespace wrsft {
 
         while (true)
         {
-            logfunc("WebServer<maxClient>::run", "running....");
+           // logfunc("WebServer<maxClient>::run", "running....");
 
             if(exit){
                 logfunc("WebServer<maxClient>::run", "exit requested breaking out.");
@@ -112,8 +113,8 @@ namespace wrsft {
         }
 
         running = 0;
-        pthread_exit(0);
         logfunc("WebServer<maxClient>::run", "end");
+        pthread_exit(0);
         // raise condition here just in case
     }
 

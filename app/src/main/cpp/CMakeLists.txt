@@ -6,7 +6,10 @@ file (GLOB CPP_FILES impl/*.cpp)
 
 file (GLOB H_FILES includes/*.h)
 
-set (SOURCE_FILES ${CPP_FILES} ${H_FILES})
+file (GLOB FS_FILES includes/fs/*.hpp)
+
+
+set (SOURCE_FILES ${CPP_FILES} ${H_FILES} ${FS_FILES})
 
 
 include_directories ( includes )

@@ -14,6 +14,7 @@ import kotlinx.coroutines.Delay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import java.lang.ref.WeakReference
 import java.util.logging.Logger
 
@@ -124,6 +125,26 @@ class ViewModel () : ViewModel() {
 
     fun open() {
 
+    }
+
+
+    private fun getTempFiles(): Array<File>? {
+
+        var context = contextRef?.get()
+        val ext: File? = context?.getExternalFilesDir(null)
+        val tempDir = File(ext, "logs/")
+        tempDir.mkdirs()
+
+        if (!tempDir.exists() || !tempDir.canWrite()) {
+            return null
+        }
+
+        val files = tempDir.listFiles()
+
+        files?.forEach {
+            println("existing file found in logs: ${it.name}    =>  ${it.length()} bytes")
+        }
+        return files
     }
 
 }

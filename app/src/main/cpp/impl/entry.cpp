@@ -70,6 +70,7 @@ JNIEXPORT void stop_app( JNIEnv *pEnv, jobject pObj)
     wrsft::Application::write_log("JNIEXPORT__stop_app", "start");
     wrsft::Application& _app = wrsft::Application::get_instance("");
     _app.stop();
+    wrsft::Application::cleanUp();
     wrsft::Application::write_log("JNIEXPORT__stop_app", "end");
 }
 
@@ -100,4 +101,4 @@ void android_main(struct android_app* app) {
 }
  */
 
-#endif SERVICEWITHNAVCONTROLLER_ENTRY_CPP
+#endif //SERVICEWITHNAVCONTROLLER_ENTRY_CPP

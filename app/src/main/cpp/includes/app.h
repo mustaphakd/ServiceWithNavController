@@ -25,6 +25,7 @@
 #include <memory.h>
  */
 
+#include <__config>
 
 //#include <inttypes.h>
 #include <jni.h>
@@ -33,6 +34,20 @@
 #include "webServer.h"
 #include <memory>
 //#include <assert.h>
+
+#include <iostream>
+#include <vector>
+//#include <filesystem>
+
+#include <chrono>  // chrono::system_clock
+#include <ctime>   // localtime
+#include <sstream> // stringstream
+#include <iomanip> // put_time
+
+#include <fs/filesystem.hpp>
+//namespace fs = std::filesystem;
+
+namespace fs = ghc::filesystem;
 
 #define  LOG_TAG    "wrsft-ServiceWIthNavController" // or static const char* kTAG = "hello-jniCallback";
 #define  LOGI(...)  ((void)__android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__))
@@ -50,8 +65,12 @@ namespace wrsft {
 
     class Application {
         public:
+        const int FILE_SIZE = 2 * 1024 * 1024;
         static Application& get_instance(const std::string path);
+        static void cleanUp();
 
+
+        //Settings > System > Developer options > Logger buffer sizes and choose a higher value.
         static void write_log(const std::string methodName, const std::string message);
 
         void start(); // start thread
@@ -66,12 +85,22 @@ namespace wrsft {
         const std::string directory_path;
         static Application * instance ;
 
+        fs::fstream * logFile ;
+
         WebServer<5> webServer;
 
         Application() = delete;
         Application(const std::string);
         Application(const Application& other) = delete;
         Application& operator=(const Application& other) = delete;
+
+
+
+        std::vector<std::string> getFiles(std::string path);
+        int getStreamSize(std::string path);
+        void writeToFile(std::string content);
+
+        void openOrCreateFile(std::string );
     };
 
 }

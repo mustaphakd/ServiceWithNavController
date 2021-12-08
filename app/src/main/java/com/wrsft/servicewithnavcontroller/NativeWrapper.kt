@@ -6,8 +6,8 @@ class NativeWrapper {
     external fun startapp(directory: String) //: Void
     external fun stopapp() //: Void
 
-    fun startWrapperApp() {
-        startapp("none")
+    fun startWrapperApp(tempdir: String) {
+        startapp(tempdir)
     }
 
     fun stopWrapperApp() {
