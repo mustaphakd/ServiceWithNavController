@@ -1,20 +1,17 @@
 package com.wrsft.servicewithnavcontroller
 
 import android.app.ActivityManager
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
-import androidx.databinding.BaseObservable
-import androidx.databinding.ObservableField
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.play.core.tasks.Task
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Delay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileOutputStream
 import java.lang.ref.WeakReference
 import java.util.logging.Logger
 
@@ -51,6 +48,40 @@ class ViewModel () : ViewModel() {
         }
     }
 
+    private fun loadResources() {
+        log.info("loading resources.... Start")
+
+        val context : Context? = contextRef?.get()
+
+        if (context == null)
+            throw Error("Failed to acquired Activity context.")
+
+        val ext: File? =context.getExternalFilesDir(null)
+        val tempDir = File(ext, "res/")
+        tempDir.mkdirs()
+
+        if (!tempDir.exists() || !tempDir.canWrite()) {
+            throw Error("Failed to open res directory");
+        }
+
+        copyResourceToDestination(tempDir, "index.html", R.raw.index, context)
+        copyResourceToDestination(tempDir, "cert.pem", R.raw.cert, context)
+        copyResourceToDestination(tempDir, "key.pem", R.raw.key, context)
+        copyResourceToDestination(tempDir, "index.brot", R.raw.indexbrot, context)
+
+
+        log.info("loading resources.... Start")
+    }
+
+    fun copyResourceToDestination(destDir: File, destFileName: String, sourceFd: Int, context: Context){
+        val dstFullpath =  File(destDir, destFileName)
+        if(! dstFullpath.exists())
+        {
+            context.resources.openRawResource(sourceFd)
+            .copyTo(FileOutputStream(dstFullpath))
+        }
+    }
+
     private val serviceDetectionFlow : Flow<Boolean> = flow {
         var firstRun = true
 
@@ -76,6 +107,8 @@ class ViewModel () : ViewModel() {
 
     fun setContext(context: android.content.Context){
         contextRef = WeakReference<android.content.Context>(context)
+
+        loadResources()
     }
 
 

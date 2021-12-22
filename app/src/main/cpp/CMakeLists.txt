@@ -8,8 +8,12 @@ file (GLOB H_FILES includes/*.h)
 
 file (GLOB FS_FILES includes/fs/*.hpp)
 
+file (GLOB ANDRD_FILES includes/android/*.h)
 
-set (SOURCE_FILES ${CPP_FILES} ${H_FILES} ${FS_FILES})
+file (GLOB MRS_FILES includes/morris/*.h includes/morris/*.c)
+
+
+set (SOURCE_FILES ${CPP_FILES} ${H_FILES} ${FS_FILES} ${MRS_FILES})
 
 
 include_directories ( includes )

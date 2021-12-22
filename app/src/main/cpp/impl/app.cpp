@@ -10,10 +10,17 @@ namespace wrsft {
 
     Application * Application::instance = nullptr;
     Application::Application(const std::string str):
-        directory_path{str}, webServer{ WebServer<5>(&Application::write_log)}, logFile{nullptr}
+        directory_path{str}, writeCounter{0}, current_file{""}, webServer{ WebServer<5>(&Application::write_log, getResDirPath(directory_path))}, logFile{nullptr}
     {
 
+        fs::path rootdir =  { directory_path};
+        fs::path logdir = rootdir / "logs";
+
+        log_directory_path = logdir.string();
+
         Application::write_log("Application::ctr", "directory path and webserver instantiated :== " + directory_path);
+        Application::write_log("Application::ctr", "log directory path and webserver instantiated :== " + log_directory_path);
+        Application::write_log("Application::ctr", "res directory path and webserver instantiated :== " + res_directory_path);
     }
 
      void Application::write_log(const std::string methodName, const std::string message)
@@ -76,7 +83,7 @@ namespace wrsft {
           // this->webServer = nullptr;
        }
 
-        wrsft::Application::write_log("Application::Destructor ~Application", "stop");
+        wrsft::Application::write_log("Application::Destructor ~Application", "end");
     }
 
     std::vector<std::string> Application::getFiles(std::string path) {
@@ -93,9 +100,10 @@ namespace wrsft {
 
     int Application::getStreamSize(std::string path) {
 
-        auto size = fs::file_size(path);
+        LOGE("%s():> %s %s", "Application::getStreamSize", "start: ", path.c_str());
+        auto size = Application::getFileSize(path);  //fs::file_size(path);
 
-        LOGE("%s():> %s", "Application::getStreamSize", size);
+        LOGE("%s():> %d", "Application::getStreamSize. end: ", size);
         return size;
     }
 
@@ -103,25 +111,32 @@ namespace wrsft {
 
         if(!logFile)
         {
-            //openOrCreateFile()
+            openOrCreateFile(log_directory_path);
 
-            LOGE("%s():> %s", "Application::writeToFile", "file not yet openned for streaming!");
-            return;
+            LOGI("%s():> %s", "Application::writeToFile", "file not yet openned for streaming!");
+            //return;
+        }
+        else if( ++writeCounter > 100) {
+            writeCounter = 0;
+
+            if(fileSizeReachedMax(current_file))
+            {
+                auto newFullPathFile = generateNewFileName(log_directory_path);
+                openFile(newFullPathFile);
+            }
         }
 
-        std::string dataTime = " ::";
-        std::string formattedContent = dataTime + content + " \n";
+        std::string dataTime = Application::getFormattedDateString();
+        std::string formattedContent = dataTime+ ":: " + content + " \n";
 
-        LOGE("%s():> %s", "Application::writeToFile", "Writing to file.");
+        //LOGI("%s():> %s", "Application::writeToFile", "Writing to file.");
 
-        fs::fstream& streamer = *logFile;
-
-          // formattedContent.c_str();
+        (*logFile) << formattedContent;
+        logFile->flush();
 
     }
 
     void Application::openOrCreateFile(std::string directory) {
-        using namespace std::literals;
 
         LOGE("%s():> %s", "Application::openOrCreateFile", directory.c_str());
 
@@ -133,12 +148,11 @@ namespace wrsft {
 
         for(auto& path : files )
         {
-            auto fileSize = getStreamSize(path);
+            auto maxSizeReached = fileSizeReachedMax(path);
 
-            LOGE("%s():> %s", "Application::openOrCreateFile", path.c_str());
+            LOGE("%s():> %s", "Application::openOrCreateFile", "check file size against maximum");
 
-            if(fileSize >= Application::FILE_SIZE) continue;
-
+            if(maxSizeReached) continue;
 
             LOGE("%s():> %s", "Application::openOrCreateFile", "will use the file named above :)");
             foundFile = path;
@@ -149,52 +163,113 @@ namespace wrsft {
         {
 
             LOGE("%s():> %s", "Application::openOrCreateFile", "file not found creating new file for writing.");
-            //yyyyMMdd_HHmmss
-            const std::chrono::time_point<std::chrono::system_clock> now =
-                    std::chrono::system_clock::now();
-
-            const std::time_t t_c = std::chrono::system_clock::to_time_t(now - 24h);
-            std::stringstream ss;
-
-            ss << std::put_time(std::localtime(&t_c), "%Y%m%d_%H%M%S");
-
-            //fs::path _path {directory};
-           // fs::path fullPath = _path /  ss.str();
-           // foundFile = fullPath.c_str();
-
-            //LOGE("%s():> %s", "Application::openOrCreateFile", "file name creation end reached");
-
+            foundFile = generateNewFileName(directory);
+            LOGE("%s():> %s", "Application::openOrCreateFile", "file name creation end reached.");
         }
 
+        openFile(foundFile);
+    }
 
-        LOGE("%s():> %s", "Application::openOrCreateFile", foundFile.c_str());
+    std::string Application::generateNewFileName(std::string directory) {
+        using namespace std::literals;
+        LOGE("%s():> %s", "Application::generateNewFileName", "file name creation end reached.");
 
-        // not createInstance fStream.  but first release existing if not null
-        // see how to do it with unique_ptr
+        auto formatedDateTime = Application::getFormattedDateString() + ".log";
+
+        fs::path _path{directory};
+        fs::path fullPath = _path / formatedDateTime;
+
+        LOGE("%s():> %s %s", "Application::generateNewFileName", "new file name is: ", fullPath.c_str());
+
+        return fullPath;
+    }
+
+    std::string Application::getFormattedDateString()
+    {
+        using namespace std::literals;
+       // LOGE("%s():> %s", "Application::getFormattedDateString", "computing date string format");
+        //yyyyMMdd_HHmmss
+        const std::chrono::time_point<std::chrono::system_clock> now =
+                std::chrono::system_clock::now();
+
+        const std::time_t t_c = std::chrono::system_clock::to_time_t(now - 24h);
+        std::stringstream ss;
+
+        ss << std::put_time(std::localtime(&t_c), "%Y%m%d_%H%M%S");
+
+        return ss.str();
+    }
+
+    void Application::openFile(std::string fullPath)
+    {
+        LOGE("%s():> %s", "Application::openFile", fullPath.c_str(), ".  Start....");
+
+        if(logFile && logFile->is_open())
+        {
+            LOGI("%s():> %s", "Application::openFile", "fileStream is not null and is already open. Closing it.");
+            logFile->close();
+        }
 
         if(logFile)
         {
-            //logFile->close();
-           // delete logFile;
-            this->logFile = nullptr;
+            LOGI("%s():> %s", "Application::openFile", "file stream is not null and ready to open or create file.");
+            logFile->open(fullPath, fs::fstream::in | fs::fstream::out | fs::fstream::app);
+        }
+        else
+        {
+            LOGI("%s():> %s", "Application::openFile", "file stream is not null and ready to open or create file.");
+            logFile = std::make_unique<fs::fstream>(fullPath, fs::fstream::in | fs::fstream::out | fs::fstream::app);
         }
 
-        //logFile = new std::fstream (foundFile.c_str());
+        if(logFile->rdstate() == fs::fstream::failbit){
+            LOGE("%s():> %s", "Application::openFile", "file stream failbit is set.. Resetting fileStream.");
+            logFile.reset(nullptr);
+        }
+
+        LOGE("%s():> %s", "Application::openFile", fullPath.c_str(), ".  End....");
+    }
+
+    bool Application::fileSizeReachedMax(std::string fileFullPath) {
+
+        LOGE("%s():> %s", "Application::fileSizeReachedMax", fileFullPath.c_str());
 
 
+        if(! Application::doesFileExists(fileFullPath))
+            return false;
+
+
+        LOGE("%s():> %s", "Application::fileSizeReachedMax", "trying to access file size.");
+
+        auto fileSize = getStreamSize(fileFullPath);
+        LOGE("%s():> %s", "Application::fileSizeReachedMax", "file size acquired.");
+
+        if(fileSize >= Application::FILE_SIZE)
+            return true;
+
+        return false;
+    }
+
+    bool Application::doesFileExists(std::string fileFullPath) {
+        LOGE("%s():> %s", "Application::doesFileExists", fileFullPath.c_str());
+        struct stat buffer;
+        return (stat (fileFullPath.c_str(), &buffer) == 0);
+    }
+
+    size_t Application::getFileSize(std::string fileFullPath) {
+        LOGE("%s():> %s", "Application::getFileSize", fileFullPath.c_str());
+        struct stat st;
+        stat(fileFullPath.c_str(), &st);
+        auto size = static_cast<size_t>(st.st_size);
+        LOGE("%s():> %s : %d", "Application::getFileSize", "has size: ", size);
+        return  size;
+    }
+
+    std::string Application::getResDirPath(const std::string path) {
+
+        fs::path rootdir =  { path};
+        fs::path resdir = rootdir / "res";
+        res_directory_path = resdir.string();
+        return res_directory_path;
     }
 
 }
-/*
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_wrsft_servicewithnavcontroller_NativeWrapper_startapp(JNIEnv *env, jobject thiz,
-                                                               jstring directory) {
-    // TODO: implement startapp()
-}
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_wrsft_servicewithnavcontroller_NativeWrapper_stopapp(JNIEnv *env, jobject thiz) {
-    // TODO: implement stopapp()
-}
-*/

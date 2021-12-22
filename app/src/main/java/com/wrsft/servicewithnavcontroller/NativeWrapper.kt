@@ -16,7 +16,7 @@ class NativeWrapper {
 
     companion object {
         init {
-            System.loadLibrary("native-lib")
+             System.loadLibrary("native-lib")
         }
     }
 }

@@ -122,7 +122,7 @@ class ForegroundService : Service() {
             throw Error("Failed to open logs directory");
         }
 
-        return tempDir
+        return ext!!
     }
 
 

@@ -43,6 +43,7 @@
 #include <ctime>   // localtime
 #include <sstream> // stringstream
 #include <iomanip> // put_time
+#include <sys/stat.h>
 
 #include <fs/filesystem.hpp>
 //namespace fs = std::filesystem;
@@ -83,9 +84,18 @@ namespace wrsft {
 
         private:
         const std::string directory_path;
-        static Application * instance ;
+        std::string log_directory_path;
+        std::string res_directory_path;
 
-        fs::fstream * logFile ;
+        std::string current_file;
+        int writeCounter;
+
+        static Application * instance ;
+        static std::string getFormattedDateString();
+        static bool doesFileExists(std::string fileFullPath);
+        static size_t getFileSize(std::string fileFullPath);
+
+        std::unique_ptr<fs::fstream> logFile ;
 
         WebServer<5> webServer;
 
@@ -99,8 +109,13 @@ namespace wrsft {
         std::vector<std::string> getFiles(std::string path);
         int getStreamSize(std::string path);
         void writeToFile(std::string content);
+        bool fileSizeReachedMax(std::string fileFullPath);
 
         void openOrCreateFile(std::string );
+        void openFile(std::string );
+        std::string generateNewFileName(std::string directory);
+
+        std::string getResDirPath(const std::string path);
     };
 
 }
