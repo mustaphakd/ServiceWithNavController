@@ -48,6 +48,8 @@
 #include <fs/filesystem.hpp>
 //namespace fs = std::filesystem;
 
+#include <globalfix.h>
+
 namespace fs = ghc::filesystem;
 
 #define  LOG_TAG    "wrsft-ServiceWIthNavController" // or static const char* kTAG = "hello-jniCallback";
@@ -60,9 +62,18 @@ namespace fs = ghc::filesystem;
 extern "C" {
     void start_app( JNIEnv *pEnv, jobject pObj, jstring directoryName);// __unused jstring directoryName
     void stop_app(JNIEnv *pEnv, jobject pObj);
+
 }
 
 namespace wrsft {
+/*
+    typedef struct jni_context {
+        JavaVM  *javaVM;
+        jclass   jniToastClz;
+        jobject  jniToastObj;
+    } JniContext;*/
+    //JniContext g_ctx;
+   // jni_context g_ctx;
 
     class Application {
         public:
@@ -73,6 +84,10 @@ namespace wrsft {
 
         //Settings > System > Developer options > Logger buffer sizes and choose a higher value.
         static void write_log(const std::string methodName, const std::string message);
+        static void show_toast(const std::string message);
+        static void check_jni_exception(JNIEnv *, const std::string srcMethod, const std::string message);
+        static void* getJNIContext(JNIEnv *);
+        static void setJniContext(JavaVM * , JNIEnv*);
 
         void start(); // start thread
         void stop(); // stop thread
@@ -90,10 +105,13 @@ namespace wrsft {
         std::string current_file;
         int writeCounter;
 
+        static JniContext g_ctx ;
         static Application * instance ;
         static std::string getFormattedDateString();
         static bool doesFileExists(std::string fileFullPath);
         static size_t getFileSize(std::string fileFullPath);
+        static void close_log();
+
 
         std::unique_ptr<fs::fstream> logFile ;
 
@@ -116,6 +134,10 @@ namespace wrsft {
         std::string generateNewFileName(std::string directory);
 
         std::string getResDirPath(const std::string path);
+
+        static int toastLooperHandler(int arg1, int arg2, void *data);
+
+        static void pthreadRunner(int *arr);
     };
 
 }

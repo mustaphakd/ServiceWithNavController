@@ -29,15 +29,20 @@
 #include <net/if.h>
 #include <linux/if_packet.h>
 #include <net/ethernet.h> /* the L2 protocols */
-
-namespace fs = ghc::filesystem;
+#include "stringHelper.h"
 
 #define MAX_CLIENT 5
+
+namespace fs = ghc::filesystem;
+using namespace wrsft;
+
+extern "C++" std::string split(std::string , std::string );
 
 //class Streamer;
 namespace wrsft {
 
     typedef std::function<void (const std::string, const std::string)> LoggerType;
+    typedef std::function<void (const std::string)> ToasterType;
 
     template <int maxClient = MAX_CLIENT>
     class WebServer {
@@ -45,6 +50,7 @@ namespace wrsft {
     public:
         WebServer(const LoggerType& logger, const std::string resDirectory): logfunc{logger}, res_directory{resDirectory}, running{0}, exit{0}{
             logfunc("WebServer::ctr", "start ***  " + res_directory + " *** - end");
+            toasterfunc = nullptr;
         }
 
         void startServer();
@@ -63,6 +69,7 @@ namespace wrsft {
         void run();
         static void runWrapper(WebServer& server);
         void sendDataToClients();
+        void setToastHandler(const ToasterType handler);
 
         //~WebServer();
        // void setStreamer(Streamer& streamer);
@@ -74,12 +81,19 @@ namespace wrsft {
         int running;
         int exit;
         const LoggerType logfunc;
+        ToasterType toasterfunc;
         const std::string res_directory;
         pthread_t worker;
+
+        std::string ip4Address;
+        std::string ip6Address;
+        std::string ip4MAC;
+        std::string ip6MAC;
 
         std::vector<char> readBinContent(std::string fullPath, size_t& contentSize);
         std::string readFileContent(std::string fullPath);
         void printNtwrkInterface();
+        void showToast(const std::string message);
 
         bool check_wireless(const char *name, char aProtocol[16]);
         std::string get_ip_str(const struct sockaddr *sa, char *s, size_t maxlen);
@@ -87,11 +101,12 @@ namespace wrsft {
         void printMacAddress();
 
         std::string printSaFamily(const sockaddr *sa);
+
+        void storeNetworkDeviceInfo(NetworkDevice device, std::string str, std::string searchToken, std::string& addressStorage, std::string& macStorage );
     };
 }
 
 #endif //SERVICEWITHNAVCONTROLLER_WEBSERVER_H
-
 
 namespace wrsft {
 
@@ -135,7 +150,6 @@ namespace wrsft {
         auto logCounter = 0;
 
         printNtwrkInterface();
-        printMacAddress();
 
         while (true)
         {
@@ -226,41 +240,57 @@ namespace wrsft {
 
             if (ifa->ifa_addr == NULL ) continue; // ||  ifa->ifa_addr->sa_family != AF_PACKET
 
-
             std::stringstream text;
-
-            text << "interface " << ifa->ifa_name << " " << "\tFamily: " << ifa->ifa_addr ? ifa->ifa_addr->sa_family : -1;
+            text << "interface[> " << ifa->ifa_name << " ----- " << "  Family: " << ifa->ifa_addr ? static_cast<unsigned short>(ifa->ifa_addr->sa_family) : -1;
 
             if (check_wireless(ifa->ifa_name, protocol)) {
                 text << " wireless protocol: " << protocol;
             }
 
             auto s1 = get_ip_str(ifa->ifa_addr, s, 99);
+            text << " -----\taddress[> " << s1 ; //<< " ------" << s1;
 
-            text << "\taddress: " << s << " ------" << s1;
-            //s = "";
+//https://stackoverflow.com/questions/6762766/mac-address-with-getifaddrs ios osx are different
+            struct sockaddr_ll *sckaddr = (struct sockaddr_ll*)ifa->ifa_addr;
+            int i;
+            int len = 0;
+            for(i = 0; i < 6; i++)
+                len+=sprintf(macp+len,"%02X%s",sckaddr->sll_addr[i],i < 5 ? ":":"");
+            text << " -----\tmac[> " << macp ;
+
 
             if(ifa->ifa_netmask) {
                 memset(s, 0, 100);
                 s1 = get_ip_str(ifa->ifa_netmask, s, 99); //const_cast<char *>(s.c_str())
-                text << "\tmask: " << s << " ------" << s1;
+                text << " -----\tmask[> " << s1 ; //<< " ------" << s1;
             }
 
-//https://stackoverflow.com/questions/6762766/mac-address-with-getifaddrs ios osx are different
-            struct sockaddr_ll *s = (struct sockaddr_ll*)ifa->ifa_addr;
-            int i;
-            int len = 0;
-            for(i = 0; i < 6; i++)
-                len+=sprintf(macp+len,"%02X%s",s->sll_addr[i],i < 5 ? ":":"");
-            text << "\n\tmac: " << macp << " -" ;
+            auto ntwrkinfo = text.str();
+            storeNetworkDeviceInfo(NetworkDevice::wlan, ntwrkinfo, ".", ip4Address, ip4MAC);
+            storeNetworkDeviceInfo(NetworkDevice::wlan, ntwrkinfo, ":", ip6Address, ip6MAC);
 
-
-            logfunc("WebServer<maxClient>::printNtwrkInterface", text.str());
-            //s = "";
+            logfunc("WebServer<maxClient>::printNtwrkInterface", ntwrkinfo);
             memset(s, 0, 100);
         }
 
         freeifaddrs(ifaddr);
+
+        std::stringstream nicInfo;
+        nicInfo << "Ip4 address: " << ip4Address << "\tIp4 MAC: " << ip4MAC ;
+        nicInfo << "\nIp6 address: " << ip6Address << "\tIp6 MAC: " << ip6MAC ;
+        nicInfo << "\nAccess your feed using https://"<< ip4Address <<":8088";
+
+        logfunc("\n\n", nicInfo.str());
+
+        std::stringstream nicInfo2;
+        nicInfo2 << "\nAccess your feed using:\n https://"<< ip4Address <<":8088";
+
+        for(int i = 0; i < 10; i++)
+        {
+            showToast(nicInfo2.str());
+            sleep(30);
+        }
+
         logfunc("WebServer<maxClient>::printNtwrkInterface", "end");
     }
 
@@ -280,7 +310,12 @@ namespace wrsft {
 
             switch(sa->sa_family)
             {
-
+                case AF_PACKET:
+                    text << " => AF_PACKET";
+                    break;
+                default:
+                    text << " => not accounted for.";
+                    break;
             }
         }
 
@@ -314,23 +349,23 @@ namespace wrsft {
     std::string
     WebServer<maxClient>::get_ip_str(const struct sockaddr *sa, char *s, size_t maxlen) {
         logfunc("WebServer<maxClient>::get_ip_str", "start");
+
         switch(sa->sa_family) {
             case AF_INET:
                 logfunc("WebServer<maxClient>::get_ip_str", "AF_INET");
-                inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr),
-                          s, maxlen);
+                inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr), s, maxlen);
                 break;
 
             case AF_INET6:
                 logfunc("WebServer<maxClient>::get_ip_str", "AF_INET6");
-                inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr),
-                          s, maxlen);
+                inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr), s, maxlen);
                 break;
 
             default:
-                logfunc("WebServer<maxClient>::get_ip_str", "default");
+                logfunc("WebServer<maxClient>::get_ip_str", "default = " + sa->sa_family);
                 strncpy(s, "Unknown AF", maxlen);
-                return "Unknown AF"; //NULL;
+                // "Unknown AF"; //NULL;
+                break;
         }
 
         logfunc("WebServer<maxClient>::get_ip_str", "end");
@@ -420,6 +455,109 @@ namespace wrsft {
 
 
         logfunc("WebServer<maxClient>::printMacAddress", "end");
+    }
+
+    template<int maxClient>
+    void WebServer<maxClient>::storeNetworkDeviceInfo(wrsft::NetworkDevice device, std::string str,
+                                                      std::string searchToken, std::string &addressStorage,
+                                                      std::string &macStorage) {
+
+
+        logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "start");
+
+        std::string deviceStr = NetworkDeviceToString(device);
+
+
+        logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "searching for device type: " + deviceStr);
+
+        if(str.find(deviceStr) == std::string::npos) return;
+
+        std::string delimiter = "-----";
+
+        logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "spliting string into segments");
+        std::vector<std::string> segments = split(str , delimiter);
+
+        auto unknowTokenFound = false;
+        auto correctIpAddressFound = false;
+
+
+        logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "source string split into segments.");
+
+        for(auto& segment : segments)
+        {
+            logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "processing segment: " + segment);
+
+            if(segment.find("address") != std::string::npos)
+            {
+                logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "start address segment processing.");
+                std::vector<std::string> addressPath = wrsft::split(segment , "[>");
+                auto unknowToken = addressPath[1].find("Unknown");
+                unknowTokenFound = unknowToken != std::string::npos;
+
+                if( ( ! unknowTokenFound) &&
+                        (addressPath[1].find(searchToken) != std::string::npos))
+                {
+                    addressStorage = addressPath[1];
+                    correctIpAddressFound = true;
+                    logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "address for type " + deviceStr + " : " + addressStorage);
+                }
+
+                logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "end address segment processing.");
+                continue;
+            }
+
+            if(segment.find("mac") != std::string::npos &&
+                    (correctIpAddressFound || unknowTokenFound))
+            {
+                logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "start mac segment processing.");
+                std::vector<std::string> macPath = wrsft::split(segment , "[>");
+
+                if(macPath[1].find("00:00:00:00:02:00") == std::string::npos)
+                {
+                    macStorage = macPath[1];
+                    logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "mac for type " + deviceStr + " : " + macStorage);
+                }
+                logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "end mac segment processing.");
+            }
+        }
+
+
+        logfunc("WebServer<maxClient>::storeNetworkDeviceInfo", "end");
+
+       /* auto start = 0U;
+        auto end = s.find(delim);
+        while (end != std::string::npos)
+        {
+            std::cout << s.substr(start, end - start) << std::endl;
+            start = end + delim.length();
+            end = s.find(delim, start);
+        }
+
+        std::cout << s.substr(start, end);*/
+
+
+    }
+
+    template<int maxClient>
+    void
+    WebServer<maxClient>::setToastHandler(const std::function<void(const std::string)> handler) {
+        logfunc("WebServer<maxClient>::setToastHandler", "start");
+        toasterfunc = handler;
+        logfunc("WebServer<maxClient>::setToastHandler", "end");
+    }
+
+    template<int maxClient>
+    void WebServer<maxClient>::showToast(const std::string message) {
+        logfunc("WebServer<maxClient>::showToast", "start => " + message);
+
+        if(toasterfunc)
+        {
+            logfunc("WebServer<maxClient>::showToast", "sending message...");
+            auto copy = message;
+            toasterfunc(copy);
+        }
+
+        logfunc("WebServer<maxClient>::showToast", "end");
     }
 
     /*template<int maxClient>

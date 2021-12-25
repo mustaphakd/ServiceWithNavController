@@ -40,7 +40,17 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM * pVm, void* reserved)
     int rc = env->RegisterNatives( cls, methods, sizeof(methods)/sizeof(JNINativeMethod));
     if (rc != JNI_OK) return rc;
 
+    wrsft::Application::setJniContext(pVm, env);
     wrsft::Application::write_log("JNI_OnLoad", "end");
+
+//Setting up JNI context so Java methods could be invoked later by native ABI.
+/*
+    memset(&wrsft::g_ctx, 0, sizeof(wrsft::g_ctx));
+    wrsft::g_ctx.javaVM = pVm;
+
+    jclass  clz = env->FindClass("android/widget/Toast");
+    g_ctx.jniToastClz = static_cast<jclass >(env->NewGlobalRef( clz)); */
+
 
     return JNI_VERSION_1_6;
 }
@@ -60,7 +70,6 @@ JNIEXPORT void start_app( JNIEnv *pEnv,  jobject pObj,  jstring directoryName) /
 
     /* Now we are done with str */
     pEnv->ReleaseStringUTFChars(directoryName, str);
-
     wrsft::Application::write_log("JNIEXPORT__start_app", "end");
 }
 

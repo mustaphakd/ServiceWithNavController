@@ -29,7 +29,6 @@ class ForegroundService : Service() {
         log.info("onCreate() bundleData:")
     }
 
-
     override fun onBind(p0: Intent?): IBinder? {
         showToast("onBind")
         log.info("onBind() bundleData:")
@@ -38,8 +37,6 @@ class ForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         showToast("onStartCommand")
-
-
 
         val pendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { notificationIntent -> //ForegroundService
@@ -112,7 +109,6 @@ class ForegroundService : Service() {
         return super.stopService(name)
     }
 
-
     private fun getLogDirectory(): File {
         val ext: File? = getExternalFilesDir(null)
         val tempDir = File(ext, "logs/")
@@ -124,7 +120,6 @@ class ForegroundService : Service() {
 
         return ext!!
     }
-
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(): String{
@@ -159,7 +154,6 @@ class ForegroundService : Service() {
         return NotificationCompat.Builder(this, channelId)
     }
 
-
     private fun getCurrentDateTime(buffer: StringBuilder) {
         // try {            //dateTimeFormat.timeZone = TimeZone.getTimeZone("GMT+1:00")
         currentLocalTime = cal.time
@@ -175,6 +169,5 @@ class ForegroundService : Service() {
         Toast.makeText(this, content, Toast.LENGTH_LONG).show()
 
     }
-
 
 }
