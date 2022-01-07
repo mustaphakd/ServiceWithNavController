@@ -30,7 +30,7 @@
 #include <linux/if_packet.h>
 #include <net/ethernet.h> /* the L2 protocols */
 #include "stringHelper.h"
-
+#include "sslHandler.h"
 #define MAX_CLIENT 5
 
 namespace fs = ghc::filesystem;
@@ -41,14 +41,17 @@ extern "C++" std::string split(std::string , std::string );
 //class Streamer;
 namespace wrsft {
 
-    typedef std::function<void (const std::string, const std::string)> LoggerType;
+    //typedef std::function<void (const std::string, const std::string)> LoggerType;
     typedef std::function<void (const std::string)> ToasterType;
+    typedef std::function<void (const std::string)> NotificationType;
 
     template <int maxClient = MAX_CLIENT>
-    class WebServer {
+    class WebServer : public SSLHandler<8088>{ //SSLHandler<"cert.pem", "key.pem">
 
     public:
-        WebServer(const LoggerType& logger, const std::string resDirectory): logfunc{logger}, res_directory{resDirectory}, running{0}, exit{0}{
+        WebServer(const LoggerType& logger, const std::string resDirectory):  res_directory{resDirectory}, running{0}, exit{0}
+         , SSLHandler<8088>(logger, resDirectory)
+        {
             logfunc("WebServer::ctr", "start ***  " + res_directory + " *** - end");
             toasterfunc = nullptr;
         }
@@ -70,6 +73,7 @@ namespace wrsft {
         static void runWrapper(WebServer& server);
         void sendDataToClients();
         void setToastHandler(const ToasterType handler);
+        void setNotificationHandler(const NotificationType handler);
 
         //~WebServer();
        // void setStreamer(Streamer& streamer);
@@ -77,11 +81,11 @@ namespace wrsft {
 
 
     private:
-        int _maxCLient = maxClient;
+       // int _maxCLient = maxClient;
         int running;
         int exit;
-        const LoggerType logfunc;
         ToasterType toasterfunc;
+        NotificationType notificationfunc;
         const std::string res_directory;
         pthread_t worker;
 
@@ -94,6 +98,7 @@ namespace wrsft {
         std::string readFileContent(std::string fullPath);
         void printNtwrkInterface();
         void showToast(const std::string message);
+        void showNotification(const std::string message);
 
         bool check_wireless(const char *name, char aProtocol[16]);
         std::string get_ip_str(const struct sockaddr *sa, char *s, size_t maxlen);
@@ -133,6 +138,7 @@ namespace wrsft {
         if(!running)return;
 
         exit = 1;
+        stop_handler();
 
         logfunc("WebServer::endServer", "Wait until thread stops");
         waitUntilStopped();
@@ -148,25 +154,25 @@ namespace wrsft {
     void WebServer<maxClient>::run() {
         logfunc("WebServer<maxClient>::run", "start");
         auto logCounter = 0;
-
         printNtwrkInterface();
 
-        while (true)
-        {
-            if(logCounter++ >= 5000000000)
+        //while (true)
+        //{
+            if(logCounter++ >= 4200000000)
             {
                 logfunc("WebServer<maxClient>::run", "running....");
                 logCounter = -100;
             }
 
+            run_handler();
            // logfunc("WebServer<maxClient>::run", "running....");
 
             if(exit){
                 logfunc("WebServer<maxClient>::run", "exit requested breaking out.");
                 exit = 0;
-                break;
+                //break;
             }
-        }
+        //}
 
         running = 0;
         logfunc("WebServer<maxClient>::run", "end");
@@ -279,17 +285,17 @@ namespace wrsft {
         nicInfo << "Ip4 address: " << ip4Address << "\tIp4 MAC: " << ip4MAC ;
         nicInfo << "\nIp6 address: " << ip6Address << "\tIp6 MAC: " << ip6MAC ;
         nicInfo << "\nAccess your feed using https://"<< ip4Address <<":8088";
-
         logfunc("\n\n", nicInfo.str());
 
-        std::stringstream nicInfo2;
-        nicInfo2 << "\nAccess your feed using:\n https://"<< ip4Address <<":8088";
+        char urlBuffer [100];
+        auto n = sprintf (urlBuffer, "https://%s:8088", ip4Address.c_str());
+        std::string notificationMessage {urlBuffer};
+        showNotification(urlBuffer);
 
-        for(int i = 0; i < 10; i++)
-        {
-            showToast(nicInfo2.str());
-            sleep(30);
-        }
+        memset(urlBuffer, 0, 100);
+        sprintf (urlBuffer, "\nAccess your feed using:\nhttps://%s:8088", ip4Address.c_str());
+        std::string toastMessage {urlBuffer};
+        showToast(toastMessage);
 
         logfunc("WebServer<maxClient>::printNtwrkInterface", "end");
     }
@@ -558,6 +564,29 @@ namespace wrsft {
         }
 
         logfunc("WebServer<maxClient>::showToast", "end");
+    }
+
+    template<int maxClient>
+    void
+    WebServer<maxClient>::setNotificationHandler(const std::function<void(const std::string)> handler) {
+        logfunc("WebServer<maxClient>::setNotificationHandler", "start");
+        notificationfunc = handler;
+        logfunc("WebServer<maxClient>::setNotificationHandler", "end");
+    }
+
+
+    template<int maxClient>
+    void WebServer<maxClient>::showNotification(const std::string message) {
+        logfunc("WebServer<maxClient>::showNotification", "start => " + message);
+
+        if(notificationfunc)
+        {
+            logfunc("WebServer<maxClient>::showNotification", "sending message...");
+            auto copy = message;
+            notificationfunc(copy);
+        }
+
+        logfunc("WebServer<maxClient>::showNotification", "end");
     }
 
     /*template<int maxClient>

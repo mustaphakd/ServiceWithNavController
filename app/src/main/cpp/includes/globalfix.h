@@ -10,6 +10,7 @@
 typedef struct jni_context { //typedef
     JavaVM  *javaVM;
     jclass   jniToastClz;
+    jclass   jniForefoundSrvceClz;
     ALooper *looper;
     jobject  jniToastObj;
 } JniContext;

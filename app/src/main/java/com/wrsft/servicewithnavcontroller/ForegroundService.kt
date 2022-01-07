@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -20,6 +21,28 @@ class ForegroundService : Service() {
     private lateinit var currentLocalTime: Date
     private val dateTimeFormat = SimpleDateFormat("yyyyMMdd_HHmmss_z", Locale.ENGLISH)
     private val cal: Calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+0:00"))
+
+    companion object {
+        lateinit var instance: ForegroundService
+        private val notificationID : Int = 4445672
+
+        @JvmStatic
+        public fun showNotification(message: CharSequence) {
+            val notification = instance?.buildNotification(message)
+
+            val compatManger = NotificationManagerCompat.from(instance)
+            compatManger.notify(notificationID, notification)
+
+            /*
+            NotificationManagerCompat.from(instance).apply {
+                notify(notificationID, notification)
+            }*/
+        }
+    }
+
+    init {
+        instance = this;
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -38,25 +61,31 @@ class ForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         showToast("onStartCommand")
 
+
+        val notification: Notification = buildNotification(getText(R.string.notification_message))
+
+        startThreads()
+// Notification ID cannot be 0.
+        startForeground(notificationID, notification)
+
+       // return super.onStartCommand(intent, flags, startId)
+        return  START_STICKY
+    }
+
+    private fun buildNotification(text: CharSequence) : Notification{
+
         val pendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { notificationIntent -> //ForegroundService
                 PendingIntent.getActivity(this, 0, notificationIntent, if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){ PendingIntent.FLAG_MUTABLE}else{ 0} ) //PendingIntent.FLAG_MUTABLE
             }
 
-        val notification: Notification = getNotificationBuilder()
+        return getNotificationBuilder()
             .setContentTitle(getText(R.string.notification_title))
-            .setContentText(getText(R.string.notification_message))
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher_background)
             .setContentIntent(pendingIntent)
             .setTicker(getText(R.string.ticker_text))
             .build()
-
-        startThreads()
-// Notification ID cannot be 0.
-        startForeground(4445672, notification)
-
-       // return super.onStartCommand(intent, flags, startId)
-        return  START_STICKY
     }
 
 
@@ -78,8 +107,8 @@ class ForegroundService : Service() {
     }
 
     private  fun writeToFile() {
-        val buffer = StringBuilder()
-        while (true)
+        //val buffer = StringBuilder() //*****
+       // while (true)  //*****
         {
             Thread.sleep(50000)
 
@@ -89,14 +118,13 @@ class ForegroundService : Service() {
             log.info("service running.. ${buffer.toString()}")
             buffer.clear() */
 
-            if(exitThreads) break
+           // if(exitThreads) break  //*****
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         exitThreads = true
-
 
         val wrapper = NativeWrapper()
         wrapper.stopWrapperApp()
@@ -169,5 +197,4 @@ class ForegroundService : Service() {
         Toast.makeText(this, content, Toast.LENGTH_LONG).show()
 
     }
-
 }

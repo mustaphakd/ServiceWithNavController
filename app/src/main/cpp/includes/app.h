@@ -66,14 +66,6 @@ extern "C" {
 }
 
 namespace wrsft {
-/*
-    typedef struct jni_context {
-        JavaVM  *javaVM;
-        jclass   jniToastClz;
-        jobject  jniToastObj;
-    } JniContext;*/
-    //JniContext g_ctx;
-   // jni_context g_ctx;
 
     class Application {
         public:
@@ -85,6 +77,7 @@ namespace wrsft {
         //Settings > System > Developer options > Logger buffer sizes and choose a higher value.
         static void write_log(const std::string methodName, const std::string message);
         static void show_toast(const std::string message);
+        static void show_notification(const std::string message);
         static void check_jni_exception(JNIEnv *, const std::string srcMethod, const std::string message);
         static void* getJNIContext(JNIEnv *);
         static void setJniContext(JavaVM * , JNIEnv*);
@@ -112,17 +105,13 @@ namespace wrsft {
         static size_t getFileSize(std::string fileFullPath);
         static void close_log();
 
-
         std::unique_ptr<fs::fstream> logFile ;
-
         WebServer<5> webServer;
 
         Application() = delete;
         Application(const std::string);
         Application(const Application& other) = delete;
         Application& operator=(const Application& other) = delete;
-
-
 
         std::vector<std::string> getFiles(std::string path);
         int getStreamSize(std::string path);
@@ -132,15 +121,12 @@ namespace wrsft {
         void openOrCreateFile(std::string );
         void openFile(std::string );
         std::string generateNewFileName(std::string directory);
-
         std::string getResDirPath(const std::string path);
 
         static int toastLooperHandler(int arg1, int arg2, void *data);
-
         static void pthreadRunner(int *arr);
     };
 
 }
 
-// LOGE("AndroidBitmap_getInfo() failed ! error=%d", ret);
 #endif //SERVICEWITHNAVCONTROLLER_APP_H

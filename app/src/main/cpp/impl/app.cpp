@@ -30,6 +30,7 @@ namespace wrsft {
         Application::write_log("Application::ctr", "res directory path and webserver instantiated :== " + res_directory_path);
 
         webServer.setToastHandler(&Application::show_toast);
+        webServer.setNotificationHandler(&Application::show_notification);
         Application::write_log("Application::ctr", "ctr end.");
 
     }
@@ -110,11 +111,14 @@ namespace wrsft {
         std::function<int(int arg1, int arg2, void*)> callback = [&](int arg1, int arg2, void* data){
 
             JNIEnv* env;
+            auto threadAttached = false;
 
             if ( Application::g_ctx.javaVM->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
                 Application::write_log("Application::showToast", "Failed to create JNI environment. " );
 
                 jint res = Application::g_ctx.javaVM->AttachCurrentThread( &env, NULL);
+                threadAttached = true;
+
                 if (JNI_OK != res && JNI_EDETACHED == res) {
                     Application::write_log("Application::showToast", "Failed to create JNI environment 2nd time by attaching current thread. end " );
                     return 0;
@@ -151,6 +155,11 @@ namespace wrsft {
             env->DeleteLocalRef(toastMessage);
             Application::write_log("Application::showToast", "end " );
 
+            if(threadAttached)
+            {
+                Application::g_ctx.javaVM->DetachCurrentThread();
+            }
+
             return 0;};
 
         ALooper_callbackFunc looperCb = Application::toastLooperHandler;  // *(static_cast<ALooper_callbackFunc*>(static_cast<void*>(&callback)));
@@ -159,6 +168,8 @@ namespace wrsft {
         char bte = 'j';
         write(msgpipe[writeIdx], &bte, 1);
         sleep(5);
+
+        //show_notification(message);
     }
 
     int Application::toastLooperHandler(int arg1, int arg2, void* data)
@@ -442,5 +453,51 @@ namespace wrsft {
         ALooper_acquire(Application::g_ctx.looper);
         jclass  clz = env->FindClass("android/widget/Toast");
         Application::g_ctx.jniToastClz = static_cast<jclass >(env->NewGlobalRef( clz));
+
+        jclass serviceClass = env->FindClass("com/wrsft/servicewithnavcontroller/ForegroundService");
+        Application::g_ctx.jniForefoundSrvceClz = static_cast<jclass >(env->NewGlobalRef( serviceClass));
+    }
+
+    void Application::show_notification(const std::string message) {
+        Application::write_log("Application::show_notification", "Start" );
+
+        JNIEnv* env;
+        auto threadAttached = false;
+
+        if ( Application::g_ctx.javaVM->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
+            Application::write_log("Application::show_notification", "Failed to create JNI environment. " );
+
+            jint res = Application::g_ctx.javaVM->AttachCurrentThread( &env, NULL);
+            threadAttached = true;
+
+            if (JNI_OK != res) { // && JNI_EDETACHED == res
+                Application::write_log("Application::show_notification", "Failed to create JNI environment 2nd time by attaching current thread. end " );
+                return;
+            }
+        }
+
+        jmethodID showNotificationMeth = env->GetStaticMethodID(Application::g_ctx.jniForefoundSrvceClz, "showNotification", "(Ljava/lang/CharSequence;)V");
+        if(showNotificationMeth == NULL){
+            Application::write_log("Application::show_notification", "Failed to locate service's showNotification. end " );
+            return;
+        }
+
+        Application::write_log("Application::show_notification", "Creating locale string reference." );
+        jstring notificationMessage = env->NewStringUTF(message.c_str());
+        Application::check_jni_exception(env, "Application::show_notification", "Exception occurred creating locale string reference." );
+
+        Application::write_log("Application::show_notification", "Invoking service static showNotification method." );
+        env->CallStaticVoidMethod(Application::g_ctx.jniForefoundSrvceClz, showNotificationMeth, notificationMessage);
+        Application::check_jni_exception(env, "Application::show_notification", "Exception occurred invoking service static showNotification method." );
+
+        Application::write_log("Application::show_notification", "Deleting local string reference." );
+        env->DeleteLocalRef(notificationMessage);
+
+        if(threadAttached)
+        {
+            Application::g_ctx.javaVM->DetachCurrentThread();
+        }
+
+        Application::write_log("Application::show_notification", "end " );
     }
 }

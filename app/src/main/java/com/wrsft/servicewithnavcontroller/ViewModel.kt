@@ -36,14 +36,19 @@ class ViewModel () : ViewModel() {
     }
 
     public fun runScope() {
+        var logCounter = 0
 
         viewModelScope.launch {
             serviceDetectionFlow.collect { newVal ->
-                log.info("serviceDetectionFlow.collect newVal: ${newVal}")
+                if(logCounter++ >= 100)
+                    log.info("serviceDetectionFlow.collect newVal: ${newVal}")
                 _canStart.value = (!newVal)
                 _canStop.value = newVal
-                log.info("serviceDetectionFlow.collect canStart: ${canStart.value}")
-                log.info("serviceDetectionFlow.collect canStop: ${canStop.value}")
+                if(logCounter >= 100) {
+                    log.info("serviceDetectionFlow.collect canStart: ${canStart.value}")
+                    log.info("serviceDetectionFlow.collect canStop: ${canStop.value}")
+                    logCounter = -1000
+                }
             }
         }
     }
@@ -83,21 +88,25 @@ class ViewModel () : ViewModel() {
     }
 
     private val serviceDetectionFlow : Flow<Boolean> = flow {
-        var firstRun = true
+       // var firstRun = true
+        var logCounter = 0;
 
         while (true) {
             var context = contextRef?.get()
 
             if (context != null) {
                 val isServiceRunning = isServiceRunning()
-                var previousValue = canStop.value
+                //var previousValue = canStop.value
 
-                log.info("viewmodel i service running? : ${isServiceRunning}")
+                if(logCounter++ >= 10) {
+                    log.info("viewmodel i service running? : ${isServiceRunning}")
+                    logCounter = -10
+                }
 
                //if (previousValue != isServiceRunning || firstRun == true) {
-                   firstRun = false
+                   //firstRun = false
                    emit(isServiceRunning)
-                   previousValue = !previousValue
+                  // previousValue = !previousValue
                //}
             }
 
