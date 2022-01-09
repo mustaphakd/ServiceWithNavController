@@ -12,7 +12,7 @@
  * includes following below:
  * #include <sys/cdefs.h>
 
-/* wchar_t is required in stdlib.h according to POSIX.
+ * wchar_t is required in stdlib.h according to POSIX.
  * note that defining __need_wchar_t prevents stddef.h
  * to define all other symbols it does normally *
 #define __need_wchar_t

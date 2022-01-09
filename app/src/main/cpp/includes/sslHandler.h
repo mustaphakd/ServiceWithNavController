@@ -43,7 +43,7 @@ namespace wrsft {
         int running;
         std::string cert = "sd";
         std::string key;
-        std::unique_ptr<Epoller> epoller = nullptr;
+        std::weak_ptr<Epoller> weakPoller;
 
         static std::string getSslRuntimeErrors();
 
@@ -79,22 +79,57 @@ namespace wrsft {
 
     template<int port>
     void SSLHandler<port>::run_handler() {
+        logfunc("SSLHandler<port>::run_handler", "start");
+
         auto logCounter = 0;
         if (running) return;
 
         SSL_CTX *ctx;
         int server;
-        char *portnum;
 
         ctx = InitServerCTX();                                /* initialize SSL */
         LoadCertificates(ctx, "cert.pem", "key.pem");    /* load certs */
         server = OpenListener();                /* create server socket */
 
 
+        logfunc("SSLHandler<port>::run_handler", "constructing new instance of Epoller");
+        //Epoller poller(server,logfunc);  // remove comment ***************
+        std::shared_ptr<Epoller> poller = std::make_shared<Epoller>  (server,logfunc);  //(&poller);
+        weakPoller = poller;
+
+
+        logfunc("SSLHandler<port>::run_handler", "setting poller.setNewRequestHandler callback handler.");
+
+        poller->setNewRequestHandler([&](Channel& channel){
+
+            logfunc("SSLHandler<port>::run_handler-poller.setNewRequestHandler", "start");
+            struct sockaddr_in addr;
+            int len = sizeof(addr);
+            SSL *ssl;
+
+            int client = accept(channel.fd,
+                                reinterpret_cast<sockaddr *>(&addr),
+                                reinterpret_cast<socklen_t *>(&len));        /* accept connection as usual */
+            printf("Connection: %s:%d\n",
+                   inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+            ssl = SSL_new(ctx);                             /* get new SSL state with context */
+            SSL_set_fd(ssl, client);                        /* set connection socket to SSL state */
+            Servlet(ssl);
+
+            logfunc("SSLHandler<port>::run_handler-poller.setNewRequestHandler", "end");
+        });
+
+
+        logfunc("SSLHandler<port>::run_handler", "setting poller.setExistingClientRequestHandler callback handler.");
+
+        poller->setExistingClientRequestHandler([&](Channel& channel){
+
+            logfunc("SSLHandler<port>::run_handler-poller.setExistingClientRequestHandler", "callback start-stop");
+        });
 
         //after listening on socket, set running to true
         running = 1;
-
+/*
         while (true)
         {
             //if(logCounter++ >= 4200000)
@@ -109,21 +144,31 @@ namespace wrsft {
 
             int client = accept(server,
                                 reinterpret_cast<sockaddr *>(&addr),
-                                reinterpret_cast<socklen_t *>(&len));        /* accept connection as usual */
+                                reinterpret_cast<socklen_t *>(&len));        / * accept connection as usual * /
             printf("Connection: %s:%d\n",
                    inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-            ssl = SSL_new(ctx);                             /* get new SSL state with context */
-            SSL_set_fd(ssl, client);                        /* set connection socket to SSL state */
-            Servlet(ssl);                                    /* service connection */
+            ssl = SSL_new(ctx);                             /* get new SSL state with context * /
+            SSL_set_fd(ssl, client);                        /* set connection socket to SSL state * /
+            Servlet(ssl);                                    /* service connection * /
 
             if(exit){
                 logfunc("SSLHandler<port>::run_handler", "exit requested breaking out.");
-                close(server);                                        /* close server socket */
+                close(server);                                        /* close server socket * /
                 SSL_CTX_free(ctx);
                 exit = 0;
                 break;
             }
-        }
+        } */
+        logfunc("SSLHandler<port>::run_handler", "poller will start polling.....");
+        poller->startPolling();
+
+        poller.reset();
+        poller = nullptr;
+
+        logfunc("SSLHandler<port>::run_handler", "exit requested. Closing server and breaking out.");
+        close(server);                                        /* close server socket */
+        SSL_CTX_free(ctx);
+        exit = 0;
 
         running = 0;
         logfunc("\"SSLHandler<port>::run_handler", "end");
@@ -385,10 +430,11 @@ namespace wrsft {
     void SSLHandler<port>::stop_handler() {
         logfunc("\"SSLHandler<port>::stop_handler", "start");
 
-        if(! epoller)
-            logfunc("\"SSLHandler<port>::stop_handler", "epoller not defined. end"); return;
+        if( std::shared_ptr<Epoller> sharedPoller = weakPoller.lock()) {
+            logfunc("\"SSLHandler<port>::stop_handler", "weakPoller is defined. will invoke close");
+            sharedPoller->close();
+        }
 
-        epoller->close();
         logfunc("\"SSLHandler<port>::stop_handler", "end");
     }
 }

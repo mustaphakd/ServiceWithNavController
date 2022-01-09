@@ -247,7 +247,7 @@ namespace wrsft {
             if (ifa->ifa_addr == NULL ) continue; // ||  ifa->ifa_addr->sa_family != AF_PACKET
 
             std::stringstream text;
-            text << "interface[> " << ifa->ifa_name << " ----- " << "  Family: " << ifa->ifa_addr ? static_cast<unsigned short>(ifa->ifa_addr->sa_family) : -1;
+            text << "interface[> " << ifa->ifa_name << " ----- " << "  Family: " << (ifa->ifa_addr ? static_cast<unsigned short>(ifa->ifa_addr->sa_family) : -1);
 
             if (check_wireless(ifa->ifa_name, protocol)) {
                 text << " wireless protocol: " << protocol;
