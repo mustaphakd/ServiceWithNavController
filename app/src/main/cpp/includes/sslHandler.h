@@ -21,6 +21,7 @@
 #include <openssl/err.h>
 
 #include "epoller.h"
+#include "httpdefinitions.h"
 
 namespace fs = ghc::filesystem;
 
@@ -110,8 +111,14 @@ namespace wrsft {
             int client = accept(channel.fd,
                                 reinterpret_cast<sockaddr *>(&addr),
                                 reinterpret_cast<socklen_t *>(&len));        /* accept connection as usual */
-            printf("Connection: %s:%d\n",
-                   inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+
+
+            char bfr [100];
+            auto n = sprintf (bfr, "Connection: %s:%d\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+
+            std::string connectionDetails {bfr};
+            logfunc("SSLHandler<port>::run_handler-poller.setNewRequestHandler", "connection details: " + connectionDetails);
+
             ssl = SSL_new(ctx);                             /* get new SSL state with context */
             SSL_set_fd(ssl, client);                        /* set connection socket to SSL state */
             Servlet(ssl);
