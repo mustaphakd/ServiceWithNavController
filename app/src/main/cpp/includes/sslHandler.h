@@ -397,19 +397,42 @@ namespace wrsft {
             ShowCerts(ssl);                                /* get any certificates */
             bytes = SSL_read(ssl, buf, sizeof(buf));    /* get request */
 
-            logfunc("\"SSLHandler<port>::Servlet", "bytes read: " + std::to_string(bytes));
+            //logfunc("\"SSLHandler<port>::Servlet", "bytes read: " + std::to_string(bytes));
+            //
+            auto parser = std::make_shared<HttpMessageParser>(logfunc);  //*((wrsft::LoggerType*)(void*)&logfunc)
+            FileDescriptor descriptor {*ssl}; //std::make_shared<SSL>(
+            auto result = parser->parse(descriptor); // pass in ssl
 
-            if ( bytes > 0 )
+            //if ( bytes > 0 )   // todo ******************** block to parse and set request response and route table handlers
+            if(result)
             {
+                /*
                 buf[bytes] = 0;
                // printf("Client msg: \"%s\"\n", buf);
                std::string  dataRead {buf};
                 logfunc("\"SSLHandler<port>::Servlet", "data read: " + dataRead);
 
+
                 logfunc("\"SSLHandler<port>::Servlet", "writing response to stream");
-                //sprintf(reply, HTMLecho.c_str(), buf);            /* construct reply */
+                //sprintf(reply, HTMLecho.c_str(), buf);            /* construct reply * /
                 SSL_write(ssl, (void *) response.c_str(), response.length() + 1);
-                //SSL_write(ssl, reply, strlen(reply));    /* send reply */
+                //SSL_write(ssl, reply, strlen(reply));    /* send reply * /
+                */
+
+                auto request = result.getRequest();
+                 auto path = request->getRequestPath();
+
+                // get handler from path -> handlers map
+                auto handler = HttpRoutes::getHandler(path);
+
+                // run auth middleware on request before proceeding.
+
+                HttpResponse response(logfunc, descriptor);
+                bool keep = handler(request, response);
+
+                if(keep){
+                    //store reference to descriptor
+                }
             }
             else
             {

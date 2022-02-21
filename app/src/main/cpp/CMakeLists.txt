@@ -6,9 +6,9 @@ include(ExternalProject)
 set(VERBOSE 1)
 
 #set (SRCS Hello.c File2.c File3.c)
-file (GLOB CPP_FILES impl/stringHelper.cpp impl/epoller.cpp impl/*.cpp)
+file (GLOB CPP_FILES impl/stringHelper.cpp impl/epoller.cpp impl/httpdefinitions.cpp impl/*.cpp)
 
-file (GLOB H_FILES includes/stringHelper.h includes/epoller.h includes/*.h)
+file (GLOB H_FILES includes/stringHelper.h includes/epoller.h includes/httpdefinitions.h includes/*.h)
 
 file (GLOB FS_FILES includes/fs/*.hpp)
 
